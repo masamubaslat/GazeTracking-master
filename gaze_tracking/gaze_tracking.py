@@ -1,4 +1,4 @@
-from __future__ import division
+from _future_ import division
 import os
 import cv2
 import dlib
@@ -14,7 +14,7 @@ class GazeTracking(object):
     and pupils and allows to know if the eyes are open or closed
     """
 
-    def __init__(self):
+    def _init_(self):
         self.frame = None
         self.eye_left = None
         self.eye_right = None
@@ -24,7 +24,7 @@ class GazeTracking(object):
         self._face_detector = dlib.get_frontal_face_detector()
 
         # _predictor is used to get facial landmarks of a given face
-        cwd = os.path.abspath(os.path.dirname(__file__))
+        cwd = os.path.abspath(os.path.dirname(_file_))
         model_path = os.path.abspath(os.path.join(cwd, "trained_models/shape_predictor_68_face_landmarks.dat"))
         self._predictor = dlib.shape_predictor(model_path)
 
@@ -113,16 +113,22 @@ class GazeTracking(object):
             return self.is_right() is not True and self.is_left() is not True
 
     def is_blinking(self):
+        status=0
         """Returns true if the user closes his eyes"""
         if self.pupils_located:
             blinking_ratio = (self.eye_left.blinking + self.eye_right.blinking) / 2
-            return blinking_ratio 
+            if(blinking_ratio>5.5):
+                status=1
+            elif(blinking_ratio < 2.5):
+                status =2
+            return status
 
-    #def is_closed(self):
-      #  """Returns true if the user closes his eyes"""
-     #   if self.pupils_located:
-          #  blinking_ratio = (self.eye_left.blinking + self.eye_right.blinking) / 2
-            return blinking_ratio <0.3
+    # def is_eye(self):
+    #     """Returns true if the user closes his eyes"""
+    #     if self.pupils_located:
+    #         blinking_ratio = (self.eye_left.blinking + self.eye_right.blinking) / 2
+    #         return blinking_ratio 
+
 
     def annotated_frame(self):
         """Returns the main frame with pupils highlighted"""

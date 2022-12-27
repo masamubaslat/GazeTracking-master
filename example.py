@@ -1,25 +1,27 @@
-"""
-Demonstration of the GazeTracking library.
-Check the README.md for complete documentation.
-"""
-
-
 import cv2
 import time
-#from scipy.spatial import distance
-#from imutils import face_utils
 from gaze_tracking import GazeTracking
-from gpiozero import LED
-led = LED(14)
+#from gpiozero import LED
+#led = LED(14)
 gaze = GazeTracking()
 webcam = cv2.VideoCapture(0)
+#time to start detect if the command is basic or special
 startTime = time.time()
+#time to detect if this command to move the wheelchair 
+startCommandTime = time.time()
+#total blink
 countblink=0
-counter=0
-state = 0    #  0 => S   1 => L  2=> R 3=> F   4=>B
-
+#detect if he want Basic command or special command
+state = 0    #1=>Basic  2=>special  1_1=>right  1_2=>forward    1_3=>left   2_1=>backward
+#detect if he want Basic command or special command
+lookingState = 0   #=>0 => none     1=>Basic    2=>special
+# true if i close
+eyeClose=False
+#true if eye open
+eyeOpen=True
+# detect the blinking time
+blinkStartTime = time.time()
     
-
 while True: 
     curentTime = time.time()    
     # We get a new frame from the webcam
@@ -31,123 +33,188 @@ while True:
 
     frame = gaze.annotated_frame()
     text = ""
+    #ratio = gaze.is_blinking()
+    #print(ratio)
 
-    difference = curentTime - startTime
-
-    #if gaze.is_blinking():
-    #    print("in is_blinking ==1 before checking the state")
-    #    print (state)
-    #    print (startTime)
-    #    print (curentTime)
-    #    print (countblink)
-    #    if(state != 4):
-    #        startTime=time.time()
-    #        state=4
-    #        print("in is_blinking ==1 after checking the state")
-    #        print (state)
-    #        print (startTime)
-    #        print (curentTime)
-    #        print (countblink)
-    #       # counter+=1
-    #       # print(counter)
-    #       # text = "Blinking"
-    #        #led.off()
-    #elif(not gaze.is_blinking()):
-    #    print("in is_blinking ==0 before checking the time different")
-    #    print (state)
-    #    print (startTime)
-    #    print (curentTime)
-    #    if(difference >= 1 ):
-    #        if(state==4):
-    #            countblink+=1
-    #            state=0
-    #            print("in is_blinking==0 after checking the time different")
-    #            print (state)
-    #            print(startTime)
-    #            print(curentTime)
-    #            print (countblink)
-    #                #startTime=curentTime
-    #    # counter=0
+    if (gaze.is_blinking()==1): 
+        print("close")
+        eyeOpen=False
+        if not eyeClose:
+            blinkStartTime = time.time() 
+            eyeClose = True
+        if(curentTime - blinkStartTime >= 2 and curentTime - blinkStartTime <= 4 and eyeClose and not eyeOpen):
+            countblink +=1
+            blinkStartTime = time.time()
     
+    elif(gaze.is_blinking()==2): 
+        print("open")
+        eyeOpen=True
+        eyeClose =False
 
-    #if gaze.is_blinking():
-    #    #if(state != 4):
-    #        #startTime=time.time()
-    #        #state=4
-    #    counter+=1
-    #    print(counter)
-    #    text = "Blinking"
-    #       #led.off()
-    #else:
-    #    if(counter >3):
-    #        #if(curentTime - startTime >= 3 ):
-    #            #print(curentTime , startTime)
-    #        countblink+=1
-    #            #state=0
-    #            #startTime = curentTime
-    #        counter=0
+
+    if(countblink==3 and lookingState==0):
+        #Basic command => forward left right 
+        if(gaze.is_right()):
+            text = "right"
+            if(state != 1):
+                startTime=time.time()
+                state=1
+            if(curentTime - startTime >= 2):
+                text = " Basic command"
+                #now we will take the eye movement as command to move the chair
+                lookingState=1
+                #countblink=0
+
+        elif(gaze.is_left()):
+            text = "left"
+            if(state != 2):
+                startTime=time.time()
+                state=2
+            if(curentTime - startTime >= 2):
+                text = "special command"
+                lookingState=2
+                #countblink=0
+                #now we will take the eye movement as command to move the chair
+
                 
-
-    
-    if gaze.is_right():
-        if(state != 2):
-            startTime = time.time()
-            state = 2
-        text = "Looking right"
-        if(curentTime - startTime > 3):
+    if(lookingState==1):   
+        if(gaze.is_right()):
             text = "looking right"
-            #led.on()
-    elif gaze.is_left():
-        state = 1
-        text = "Looking left"
-        #led.off()
-    elif gaze.is_center():
-        state = 3
-        text = "Looking center"
-        #led.off()
-    
-    #if(countblink == 3):
-    #    if(gaze.is_right()):
-    #        text = "looking right"
-    #        if(state != 2):
-    #            startTime=time.time()
-    #            state=2
-    #        if(curentTime - startTime >= 2):
-    #            text = " we will turn right now"
-    #            #counterblink=0
-#
-    #    elif(gaze.is_center()):
-    #        text = "looking center"
-    #        if(state != 3):
-    #            startTime=time.time()
-    #            state=3
-    #        if(curentTime - startTime >= 2):
-    #            text = " we will go forward"
-    #            #counterblink=0
-    #            
-    #    elif(gaze.is_left()):
-    #        text = "looking left"
-    #        if(state != 1):
-    #            startTime=time.time()
-    #            state=1
-    #        if(curentTime - startTime >= 2):
-    #            text = " we will turn left now"
-    #            #counterblink=0
-#
-    #elif(countblink == 4):
-    #    text = "stop the chair"
-    #    #countblink=0
-    #
-    #elif(countblink == 5):
-    #    if(gaze.is_center()):
-    #        text = "looking center"
-    #        if(state != 5):
-    #            startTime=time.time()
-    #            state=5
-    #        if(curentTime - startTime >= 2):
-    #            text = " we will go backward"
-    #            #counterblink=0
+            if(state != 1_1):
+                startTime=time.time()
+                state=1_1
+            if(curentTime - startTime >= 2):
+                text = " we will turn right now"
+                lookingState=0
+                counterblink=0
 
+        elif(gaze.is_center()):
+            text = "looking center"
+            if(state != 1_2):
+                startTime=time.time()
+                state=1_2
+            if(curentTime - startTime >= 2):
+                text = " we will go forward"
+                lookingState=0
+                counterblink=0
+        
+        elif(gaze.is_left()):
+            text = "looking left"
+            if(state != 1_3):
+                startTime=time.time()
+                state=1_3
+            if(curentTime - startTime >= 2):
+                text = " we will turn left now"
+                lookingState=0
+                counterblink=0  
+
+    elif(lookingState==2):
+        if(gaze.is_center()):
+                    text = "looking center"
+                    if(state != 2_1):
+                        startCommandTime=time.time()
+                        state=2_1
+                    if(curentTime - startCommandTime >= 2):
+                        text = " we will go backward"
+                        lookingState=0
+                        counterblink=0
+    
+    ###################################################################################3
+    # TO check the basic and special command
+        # For now, we'll use the states
+        # State_0  --> Initial state
+        # State_1  --> Basic Command
+        # State_11 --> Turn_Left
+        # State_12 --> Turn_Right
+        # State_2  --> Special Command
+        # State_21 --> Forward
+        # State_22 --> Backward
+        # State_3  --> Controlling by a Friend
+
+        # S_C_Flag     --> Stop/Cancel Command
+        # accept_flag  --> Accepting the Command.
+        # forget_flag  --> Forget_to_Blink
+        # con_flag     --> check continuously
+        # c_a_flag     --> check_accept_flag
+        # c_c_flag     --> check_command_flag            
+
+    # if (state ==0): #Initial State - Do NOTHING
+    #     # The user should blink 3 times:
+    #     # The screen will show if the user wanna chose the Basic or Special commands
+    #     # if (c_c_flag ==1)
+    #         # Look left for Basic Command --> state = 1
+    #         # Look right for special command --> state =2
+    #     time.sleep(2)
+    #     state =1
+
+    # #######################################################################################
+
+    # if ( state ==1 or pre_state == 1): #Basic Command
+    #     # Show the user if he/she wanna move left/right on the screan
+    #     text = "LEFT OR RIGHT !"
+    #     # Check if we need to turn left OR right
+    #     c_c_flag =1
+    #     # If the user look left  --> state = 11
+    #     # If the user look Right --> state = 12
+    #     pre_state =1
+    #     time.sleep(2)
+    #     state =11
+    #     if (state ==11): # Turn Left
+    #         # Show the command on the screan
+    #         text = "LEFT COMMAND"
+    #         c_a_flag =1
+    #         time.sleep(2)
+    #         c_a_flag =0
+    #         accept_flag=1
+    #         if ( accept_flag and not c_a_flag): #Accepting the Command.
+    #             #The wheelchair will move in a 30 or 45 degree to the wanted angle.
+    #             text = "MOVING LEFT"
+    #             time.sleep(2)                
+    #             state = 0
+    #         elif (forget_flag and not c_a_flag):
+    #             S_C_Flag=1
+        
+    #     elif (state ==12): # Turn Right
+    #         # Show the command on the screan
+    #         c_a_flag =1
+    #         if ( accept_flag and not c_a_flag): #Accepting the Command.
+    #             #The wheelchair will move in a 30 or 45 degree to the wanted angle.
+    #             text = "The wheelchair will move in a 30 or 45 degree to the wanted angle"
+    #         elif (forget_flag and not c_a_flag):
+    #             S_C_Flag=1
+                
+    #     elif (S_C_Flag): #Stop/Cancel Command OR Forget_to_Blink
+    #             state = 0 # To return to the initial state
+    #             accept_flag =0
+                
+    #######################################################################################
+    
+    # if gaze.is_right():
+    #     #blink_state=False
+    #     if(state != 2):
+    #         startTime = time.time()
+    #         state = 2
+    #     text = "Looking right"
+    #     if(curentTime - startTime > 2):
+    #         text = "looking right now"
+    #         #led.on()
+    # elif gaze.is_left():
+    #     blink_state=False
+    #     state = 11
+    #     text = "Looking left"
+    #     #led.off()
+    # elif gaze.is_center():
+    #     if(state != 3):
+    #         startTime = time.time()
+    #         state = 3
+    #     text = "Looking center"
+    #     if(curentTime - startTime > 2):
+    #         text = "Looking center now"
+    #     blink_state=False
+    #     # state = 3
+        
+    #     #led.off()
+    
     cv2.putText(frame, text, (90, 60), cv2.FONT_HERSHEY_DUPLEX, 1.6, (147, 58, 31), 2)
 
     left_pupil = gaze.pupil_left_coords()
